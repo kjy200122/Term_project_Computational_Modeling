@@ -1,7 +1,7 @@
 library(dplyr)
 library(rstan)
 
-#pre-processing
+# DATA pre-processing
 dat <- data %>%
   filter(target_mod != "word")
 dat <- dat %>%
@@ -19,13 +19,12 @@ N = length(allSubjs)      # number of subjects
 T <- max(table(dat$idcode))
 dat$rt <- dat$rt / 1000
 
-# idcode가 782733인 첫 번째 trial 인덱스 찾기
+# Processing shortest response id code[78733]
 idx <- which(dat$idcode == 782733 & dat$trial_index == 1)
 
-# 해당 idcode의 반응시간 중 첫 번째 rt가 너무 작으면 중간값으로 대체 (첫번째 제외)
+# Changing rt to median rt of the sub
 rt_median <- median(dat$rt[dat$idcode == 782733 & dat$trial_index != 1], na.rm = TRUE)
 
-# 조건에 맞으면 값 바꾸기
 if (length(idx) == 1 && dat$rt[idx] < 0.05) {
   dat$rt[idx] <- rt_median
 }
@@ -88,7 +87,7 @@ output2 = stan("DDM_Lexical_2.stan", data = dataList2,
                pars = c("mu_pr","sigma","a","tau", "intercept", "slope1","slope2", "log_lik", "choice_os", "RT_os"),
                iter = 2000, warmup=1000, chains=4, cores=2,
                init = function() {
-                 list(tau_pr = rep(-1.5, N))  # N은 tau_pr 길이 (예: 참가자 수)
+                 list(tau_pr = rep(-1.5, N))  # prevent tau from becoming too small
                })
 
 
