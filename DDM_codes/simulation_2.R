@@ -1,15 +1,12 @@
-# --- 1. 패키지 설치 및 로드 ---
 library(RWiener)
 library(rstan)
 
-# --- 2. 시뮬레이션 파라미터 설정 ---
 set.seed(2025)
 
 N <- 42        # Number of subjects
 T <- 100       # Trials per subject
 RTbound <- 0.1
 
-# 그룹 평균 및 표준편차
 simul_pars2 <- data.frame(
   a = rnorm(N, 1, 0.2),
   tau = rnorm(N, 0.30, 0.02),
@@ -19,7 +16,6 @@ simul_pars2 <- data.frame(
   subjID = 1:N
 )
 
-# subtlex: N x T 행렬
 subtlex <- matrix(rnorm(N * T, mean = 2, sd = 0.7), N, T)
 greene <- matrix(rnorm(N * T, mean = 0.7, sd = 0.7), N, T)
 
@@ -29,7 +25,7 @@ subtlex_sd   <- sd(subtlex_all)
 greene_all <- as.vector(greene)
 greene_mean <- mean(greene_all)
 greene_sd   <- sd(greene_all)
-# --- 3. 시뮬레이션 실행 ---
+
 sim_data_list <- list()
 for (i in 1:N) {
   a_i     <- simul_pars2$a[i]
@@ -72,52 +68,46 @@ for (i in 1:N) {
   )
 }
 
-# --- 4. 하나의 데이터프레임으로 결합 ---
 sim_df <- do.call(rbind, sim_data_list)
 head(sim_df)
 
-# N: 전체 참가자 수, T: 최대 시험 횟수
-N <- length(unique(sim_df$subjID))  # 참가자 수
-T <- max(table(sim_df$subjID))  # 최대 시험 횟수
+N <- length(unique(sim_df$subjID))  
+T <- max(table(sim_df$subjID))  
 
-# choice, RT, subtlex 배열 초기화
 choice <- array(0, c(N, T))
 RT <- array(0, c(N, T))
 subtlex <- array(0, c(N, T))
 greene <- array(0, c(N, T))
 
 
-# 각 참가자에 대해 데이터를 할당
 for (i in 1:N) {
-  curSubj <- unique(sim_df$subjID)[i]  # 참가자 ID 추출
-  tmp <- subset(sim_df, subjID == curSubj)  # 해당 참가자의 데이터
+  curSubj <- unique(sim_df$subjID)[i]  
+  tmp <- subset(sim_df, subjID == curSubj)  
   
-  nTrials <- nrow(tmp)  # 해당 참가자의 시험 수
+  nTrials <- nrow(tmp)  
   
-  # choice: 0 → 2, 1 → 1 변환 (원하는 방식으로 변환)
+  # choice: 0 → 2, 1 → 1 
   choice[i, 1:nTrials] <- ifelse(tmp$choice == 1, 1, 2)
   
-  # RT, subtlex는 trial 수만큼 할당
   RT[i, 1:nTrials] <- tmp$RT
   subtlex[i, 1:nTrials] <- tmp$subtlex
   greene[i, 1:nTrials] <- tmp$greene
 }
 
-# Stan 모델에 필요한 데이터 리스트 준비
 stan_data <- list(
-  N = N,  # 참가자 수
-  T = T,  # 최대 시험 횟수
-  Tsubj = table(sim_df$subjID),  # 각 참가자별 시험 횟수
-  choice = choice,  # choice 배열
-  RT = RT,  # RT 배열
-  subtlex = subtlex,  # subtlex 배열
+  N = N,  
+  T = T,  
+  Tsubj = table(sim_df$subjID),  
+  choice = choice,  
+  RT = RT, 
+  subtlex = subtlex,  
   greene = greene,
-  RTbound = 0.1,  # RT lower bound
-  minRT = apply(RT, 1, min),  # 각 참가자별 최소 RT
-  subtlex_mean  = subtlex_mean,  # 전체 평균
-  subtlex_sd    = subtlex_sd,     # 전체 표준편차
-  greene_mean  = greene_mean,  # 전체 평균
-  greene_sd    = greene_sd     # 전체 표준편차
+  RTbound = 0.1, 
+  minRT = apply(RT, 1, min),  
+  subtlex_mean  = subtlex_mean,  
+  subtlex_sd    = subtlex_sd,    
+  greene_mean  = greene_mean,  
+  greene_sd    = greene_sd   
   
 )
 
@@ -133,13 +123,10 @@ simul_fit2 <- stan(
     list(tau_pr = rep(-1.5, N))  # N은 tau_pr 길이 (예: 참가자 수)
   })
 
-## 결과
 param_sim <- rstan::extract(simul_fit2)
 
-# 그래프 4개를 한 화면에 배치
 par(mfrow = c(2, 3))
 
-## 각 변수에 대해 subplot 생성
 #a
 a_mean = apply(param_sim$a, 2, mean)
 a_sd = apply(param_sim$a, 2, sd)
