@@ -127,7 +127,6 @@ generated quantities {
   mu_d1  = mu_pr[3];
   mu_d2  = mu_pr[4];
 
-  // 초기화 (없는 값 처리)
   for (i in 1:N) {
     for (t in 1:T) {
       choice_os[i, t] = -1;
