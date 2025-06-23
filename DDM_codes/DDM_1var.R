@@ -96,15 +96,15 @@ traceplot(output1, pars = "slope")
 traceplot(output1, pars = "intercept")
 traceplot(output1, pars = "tau")
 
-#histogram: mu_pr
-par(mfrow = c(2, 2))  # 2행 2열로 배치
+# Histogram
+par(mfrow = c(2, 2)) 
 
 hist(parameters_1$mu_pr[,1])
 hist(parameters_1$mu_pr[,2])
 hist(parameters_1$mu_pr[,3])
 hist(parameters_1$mu_pr[,4])
 
-#histogram: sigma
+# histogram: sigma
 hist(parameters_1$sigma[,1])
 hist(parameters_1$sigma[,2])
 hist(parameters_1$sigma[,3])
