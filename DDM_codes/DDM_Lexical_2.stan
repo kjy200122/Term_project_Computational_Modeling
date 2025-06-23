@@ -84,7 +84,7 @@ transformed parameters {
 }
 
 model {
-  // mu_pr: [1]=log(a), [2]=tau, [3]=intercept, [4]=slope
+  // mu_pr: [1]=log(a), [2]=tau, [3]=intercept, [4]=slope1, [5]=slope2
   mu_pr[1] ~ normal(0, 1);         // log(a)
   mu_pr[2] ~ normal(0, 1);         // tau
   mu_pr[3] ~ normal(1, 1.5);     // intercept
@@ -99,26 +99,26 @@ model {
   d2_pr ~ normal(0, 1);
   d3_pr ~ normal(0, 1);
 
-  // 로그 우도 계산 (wiener_lpdf 사용)
+
   for (i in 1:N) {
     int r;
 
     for (t in 1:Tsubj[i]) {
       r = choice[i, t];
 
-      // subtlex 기반 drift rate (drift_subtlex)
+    
       real drift = intercept[i] + slope1[i] *((subtlex[i, t] - subtlex_mean) / subtlex_sd) + slope2[i] * ((greene[i, t] - greene_mean) / greene_sd);
-      // 반응 시간 계산
-      if (r == 1)  // choice가 1이면 upper boundary
-        RT[i, t] ~ wiener(a[i], tau[i], 0.5, drift);  // drift_subtlex 사용
-      else if (r == 2)  // choice가 2이면 lower boundary
+    
+      if (r == 1) 
+        RT[i, t] ~ wiener(a[i], tau[i], 0.5, drift);
+      else if (r == 2)
         RT[i, t] ~ wiener(a[i], tau[i], 0.5, -drift);
    }
   }
 }
 
 generated quantities {
-  // Group-level parameter 요약
+  // Group-level parameter
   real<lower=0> mu_a;
   real<lower=RTbound, upper=max(minRT)> mu_tau;
   real mu_d1;
@@ -128,19 +128,18 @@ generated quantities {
   // Log-likelihood for LOOIC
   real log_lik[N];
 
-  // Posterior predictive check용 시뮬레이션
+  // Posterior predictive check
   matrix[N, T] choice_os;
   matrix[N, T] RT_os;
   vector[2] tmp_os;
 
-  // Group-level 파라미터 계산
+  // Group-level
   mu_a   = exp(mu_pr[1]);
   mu_tau = Phi_approx(mu_pr[2]) * (mean(minRT) - RTbound) + RTbound;
   mu_d1  = mu_pr[3];
   mu_d2  = mu_pr[4];
   mu_d3  = mu_pr[5];
 
-  // 초기화 (없는 값 처리)
   for (i in 1:N) {
     for (t in 1:T) {
       choice_os[i, t] = -1;
@@ -162,7 +161,7 @@ generated quantities {
         log_lik[i] += wiener_lpdf(RT[i, t] | a[i], tau[i], 0.5, -drift);
       }
 
-      // posterior predictive (choice/RT 샘플링)
+      // posterior predictive
       tmp_os = wiener_rng(a[i], tau[i], 0.5, drift);
       choice_os[i, t] = tmp_os[1];
       RT_os[i, t]     = tmp_os[2];
